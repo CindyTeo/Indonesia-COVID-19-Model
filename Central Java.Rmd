@@ -1,0 +1,116 @@
+---
+title: "glm Jawa Tengah - skripsi"
+author: "cindy 01112180008"
+date: "9/19/2021"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+``````{r, echo=TRUE}
+library(dplyr)
+library(faraway)
+library(MASS)
+library(Metrics)
+library(car)
+library(AER)
+```
+
+# 1. data input for normality and dispersion test
+``````{r, echo=TRUE}
+data = data_covid_seluruh_provinsi
+```
+
+#normality test
+``````{r, echo=TRUE}
+shapiro.test(data$`jawa tengah`)
+```
+
+#dispersion test
+``````{r, echo=TRUE}
+dispersion_test(data$`jawa tengah`)
+```
+
+# 2. Counting GLM model
+
+#input and split data
+``````{r, echo=TRUE}
+data = jawa_tengah
+data=within(data,{
+  rm(Tanggal)
+})
+# split data
+set.seed(1)
+data_size=0.8*nrow(data)
+sample <- sample.int(n = nrow(data), data_size, replace = F)
+jateng_train=data[sample,]
+jateng_test=data[-sample,]
+jateng_train
+jateng_test
+```
+
+#create Poisson GLM
+``````{r, echo=TRUE}
+poisson_jateng_train = glm(jateng_train$Penambahan_Harian_Kasus_Terkonf~., family=poisson(link="log"), data = jateng_train)
+summary(poisson_jateng_train)
+# poisson glm for training data
+```
+
+#look for VIF values to see if there are any multicollinearity between variables
+``````{r, echo=TRUE}
+vif(poisson_jateng_train)
+# all VIF < 10, no multicollinearity between variables. All variables used to create Poisson model
+```
+
+#check for overdispersion in poisson glm with pearson goodness of fit
+``````{r,echo=TRUE}
+x2 = sum(residuals(poisson_jateng_train, type="pearson")^2)
+c(Df=df.residual(poisson_jateng_train), resid.dev=deviance(poisson_jateng_train),peason.x2 = x2)
+pchisq(deviance(poisson_jateng_train),df.residual(poisson_jateng_train),lower.tail=FALSE)
+# deviance(poisson_jateng_train)/df.residual(poisson_jateng_train)
+# residual deviance & pearson goodness-of-fit > residual df -> data overdispersed (model inadequate)
+# p-value = 0 -> reject goodness of fit test, model inadequate
+```
+
+#create negative binomial GLM
+``````{r, echo=TRUE}
+nb_jateng_train = glm.nb(jateng_train$Penambahan_Harian_Kasus_Terkonf~., data = jateng_train, control=glm.control(maxit=200))
+summary(nb_jateng_train)
+```
+
+#look for VIF values to see if there are any multicollinearity between variables
+``````{r, echo=TRUE}
+vif(nb_jateng_train)
+```
+
+#create nb model with backward selection
+``````{r, echo=TRUE}
+nb_jateng_train_2= stepAIC(nb_jateng_train, direction = c("backward"), trace = FALSE)
+summary(nb_jateng_train_2)
+vif(nb_jateng_train_2)
+```
+
+``````{r, echo=TRUE}
+# exp(14.21054)
+# exp(-0.13885)
+# exp(0.11968)
+# exp(0.23343)
+# exp(0.05900)
+# exp(0.02842)
+# exp(-0.03633)
+```
+
+#predict with negative binomial GLM
+``````{r, echo=TRUE}
+jateng_test$prediction = as.integer(predict(nb_jateng_train_2, newdata=jateng_test, type="response"))
+jateng_test
+```
+
+#MAE values of the selected GLM
+``````{r, echo=TRUE}
+mae(jateng_test$Penambahan_Harian_Kasus_Terkonf,jateng_test$prediction)
+mape(jateng_test$Penambahan_Harian_Kasus_Terkonf,jateng_test$prediction)
+mase(jateng_test$Penambahan_Harian_Kasus_Terkonf,jateng_test$prediction)
+rmse(jateng_test$Penambahan_Harian_Kasus_Terkonf,jateng_test$prediction)
+```
