@@ -6,4 +6,4 @@ There are two models for each province where a model is formed without using the
 
 Research result shows that the majority of weather factors are negatively correlated with daily confirmed cases, whereas most of the community mobility variables are positively correlated. There are 5 clusters formed based on weather factors, with 2 clusters containing only one province each. Daily cases of 31 provinces are better modeled without the clustering method and 3 others are better modeled with the clustering method applied.
 
-As an example, only 1 province (DKI Jakarta) would be uploaded in these files.
+As an example, only 1 province (DKI Jakarta) models would be uploaded in these files.
